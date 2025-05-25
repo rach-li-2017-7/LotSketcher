@@ -1,9 +1,11 @@
 import numpy as np
-from shapely.geometry import Polygon, Point, LineString
+from shapely.geometry import Polygon, Point, LineString, shape
 import geojson
 from pyproj import Transformer
 import json
 from typing import Tuple, List
+import folium
+import os
 
 def square_feet_to_square_meters(sq_ft: float) -> float:
     """Convert square feet to square meters."""
@@ -12,6 +14,30 @@ def square_feet_to_square_meters(sq_ft: float) -> float:
 def feet_to_meters(ft: float) -> float:
     """Convert feet to meters."""
     return ft * 0.3048
+
+def load_polygon_from_geojson(file_path: str) -> Tuple[Polygon, Point]:
+    """
+    Load polygon and entrance point from a GeoJSON file.
+    The file should contain a FeatureCollection with:
+    - A polygon feature for the boundary
+    - A point feature for the entrance
+    """
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    
+    polygon = None
+    entrance_point = None
+    
+    for feature in data['features']:
+        if feature['geometry']['type'] == 'Polygon':
+            polygon = shape(feature['geometry'])
+        elif feature['geometry']['type'] == 'Point':
+            entrance_point = Point(feature['geometry']['coordinates'])
+    
+    if polygon is None or entrance_point is None:
+        raise ValueError("GeoJSON file must contain both a polygon and a point feature")
+    
+    return polygon, entrance_point
 
 def create_sample_polygon() -> Tuple[Polygon, Point]:
     """
@@ -89,6 +115,65 @@ def generate_lot_sketch(
     
     return feature_collection
 
+def create_visualization(
+    input_polygon: Polygon,
+    entrance_point: Point,
+    output_geojson: dict,
+    output_file: str = "visualization.html"
+) -> None:
+    """
+    Create an interactive map visualization of the input polygon and output sketch.
+    
+    Args:
+        input_polygon: The input boundary polygon
+        entrance_point: The entrance point
+        output_geojson: The output GeoJSON containing lots and roads
+        output_file: Name of the output HTML file
+    """
+    # Create a map centered on the polygon's centroid
+    center_lat, center_lon = input_polygon.centroid.y, input_polygon.centroid.x
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=15)
+    
+    # Add the input polygon
+    folium.GeoJson(
+        geojson.Feature(
+            geometry=geojson.Polygon([list(input_polygon.exterior.coords)]),
+            properties={"name": "Input Boundary"}
+        ),
+        name="Input Boundary",
+        style_function=lambda x: {
+            "fillColor": "blue",
+            "color": "blue",
+            "fillOpacity": 0.1
+        }
+    ).add_to(m)
+    
+    # Add the entrance point
+    folium.CircleMarker(
+        location=[entrance_point.y, entrance_point.x],
+        radius=5,
+        color="red",
+        fill=True,
+        popup="Entrance Point"
+    ).add_to(m)
+    
+    # Add the output lots and roads
+    folium.GeoJson(
+        output_geojson,
+        name="Lots and Roads",
+        style_function=lambda x: {
+            "fillColor": "green",
+            "color": "black",
+            "fillOpacity": 0.3
+        }
+    ).add_to(m)
+    
+    # Add layer control
+    folium.LayerControl().add_to(m)
+    
+    # Save the map
+    m.save(output_file)
+
 def get_float_input(prompt: str) -> float:
     """
     Get a float input from the user with error handling.
@@ -109,9 +194,32 @@ def get_float_input(prompt: str) -> float:
         except ValueError:
             print("Please enter a valid number.")
 
+def print_polygon_area(polygon: Polygon):
+    """
+    Print the area of the polygon in square meters and square feet.
+    """
+    from pyproj import Transformer
+    # Convert lat/lon to meters
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    x, y = polygon.exterior.xy
+    coords_meters = [transformer.transform(lon, lat) for lon, lat in zip(x, y)]
+    polygon_meters = Polygon(coords_meters)
+    area_m2 = polygon_meters.area
+    area_ft2 = area_m2 / 0.09290304
+    print(f"Polygon area: {area_m2:.2f} square meters ({area_ft2:.2f} square feet)")
+
 def main():
-    # Create sample polygon and entrance point
-    polygon, entrance_point = create_sample_polygon()
+    # Check if input file exists, otherwise use sample polygon
+    input_file = "input_polygon.geojson"
+    if os.path.exists(input_file):
+        print(f"Loading polygon from {input_file}")
+        polygon, entrance_point = load_polygon_from_geojson(input_file)
+    else:
+        print("No input file found. Using sample polygon.")
+        polygon, entrance_point = create_sample_polygon()
+    
+    # Print polygon area
+    print_polygon_area(polygon)
     
     # Get user input
     print("\nPlease enter the following parameters:")
@@ -134,6 +242,10 @@ def main():
         json.dump(result, f, indent=2)
     
     print(f"\nLot sketch has been saved to {output_file}")
+    
+    # Create visualization
+    create_visualization(polygon, entrance_point, result)
+    print("Visualization has been saved to visualization.html")
 
 if __name__ == "__main__":
     main() 

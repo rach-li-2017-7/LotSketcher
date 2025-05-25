@@ -1,0 +1,31 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Boundary Polygon"
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[
+                    [40.7128, -74.0060],
+                    [40.7128, -74.0050],
+                    [40.7138, -74.0050],
+                    [40.7138, -74.0060],
+                    [40.7128, -74.0060]
+                ]]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Entrance Point"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [40.7128, -74.0055]
+            }
+        }
+    ]
+} 

@@ -3,4 +3,6 @@ shapely>=2.0.0
 geojson>=2.5.0
 pyproj>=3.0.0
 folium>=0.14.0
-scipy>=1.7.0 
+scipy>=1.7.0
+matplotlib
+ipykernel

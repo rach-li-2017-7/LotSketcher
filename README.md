@@ -23,11 +23,11 @@ python lot_sketcher.py
 ```
 
 The program will:
-1. Create a sample polygon (currently using New York City coordinates as an example)
+1. Use a sample polygon provided in input_polygon.geojson (currently using New York City coordinates as an example)
 2. Ask for input parameters:
-   - Minimum lot size (in square meters)
-   - Minimum front line length (in meters)
-   - Road width (in meters)
+   - Minimum lot size (in square feet)
+   - Minimum front line length (in feet)
+   - Road width (in feet)
 3. Generate a lot sketch
 4. Save the result as a GeoJSON file named `lot_sketch.geojson`
 
@@ -37,6 +37,7 @@ The program generates a GeoJSON file containing:
 - Lot polygons
 - Road networks
 - All coordinates are in WGS84 (latitude/longitude) format
+- Every python file is a different approach. lot_sketcher.py is the current best approach, which by 5/25/2025 is using the Voronoi Diagram to generate the lots and MST to generate the roads.
 
 ## Note
 
